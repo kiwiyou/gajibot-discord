@@ -23,6 +23,7 @@ struct Hanja {
     read: Selector,
     ruby: Selector,
     reading: Selector,
+    refer_title: Selector,
     refer: Selector,
 }
 
@@ -32,6 +33,7 @@ impl Hanja {
             read: Selector::parse(".txt_read").unwrap(),
             ruby: Selector::parse(".desc_ruby").unwrap(),
             reading: Selector::parse(".desc_ex").unwrap(),
+            refer_title: Selector::parse(".txt_emph3").unwrap(),
             refer: Selector::parse(".txt_refer.on").unwrap(),
         }
     }
@@ -123,7 +125,11 @@ async fn hanja(ctx: Context<'_>, hanja: String) -> Result<(), Error> {
 
             let class = child.attr("class");
             if class == Some("wrap_ex") {
-                description.push_str(&extract_text(child.text()));
+                let text = extract_text(child.text());
+                if text.is_empty() {
+                    continue;
+                }
+                description.push_str(&text);
                 if let Some(child) = children.next() {
                     description.push_str(" ");
                     description.push_str(&extract_text(child.text()));
@@ -157,11 +163,16 @@ async fn hanja(ctx: Context<'_>, hanja: String) -> Result<(), Error> {
                     }
                 }
             } else if class == Some("ex_refer") {
-                description.push_str("<:rui:1363124010136764516> ");
-                for refer in child.select(&ctx.data().hanja.refer) {
-                    description.push_str(&extract_text(refer.text()));
+                if let Some(title) = child.select(&ctx.data().hanja.refer_title).next() {
+                    let title = extract_text(title.text());
+                    if title == "유의자" {
+                        description.push_str("<:rui:1363124010136764516> ");
+                        for refer in child.select(&ctx.data().hanja.refer) {
+                            description.push_str(&extract_text(refer.text()));
+                        }
+                        description.push_str("\n");
+                    }
                 }
-                description.push_str("\n");
             }
         }
         HanjaInfo {
