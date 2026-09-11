@@ -1,4 +1,9 @@
-pub enum GeneralSearch {
+pub struct GeneralSearch {
+    pub typo: Vec<String>,
+    pub hit: GeneralSearchHit,
+}
+
+pub enum GeneralSearchHit {
     En {
         lemma: String,
         definitions: Vec<String>,
@@ -22,10 +27,23 @@ pub fn search_general(agent: &ureq::Agent, query: &str) -> Option<GeneralSearch>
         .into_body()
         .read_to_string()
         .unwrap();
+    let typo = body
+        .split_once("tit_speller")
+        .map_or_default(|(_, speller_begin)| {
+            let (tit_speller, _) = speller_begin.split_once("</div>").unwrap();
+            tit_speller
+                .split(r#"검색하기">"#)
+                .skip(1)
+                .map(|typo_begin| {
+                    let (typo, _) = typo_begin.split_once("</a>").unwrap();
+                    typo.into()
+                })
+                .collect()
+        });
     let (_, dict_start) = body.split_once(r#"tit_word">"#)?;
     let (_, lemma_start) = dict_start.split_once(r#"표제어 클릭">"#).unwrap();
     let (dirty_lemma, after_lemma) = lemma_start.split_once("</a>")?;
-    if dict_start.starts_with("영어사전") || dict_start.starts_with("영영사전") {
+    let hit = if dict_start.starts_with("영어사전") || dict_start.starts_with("영영사전") {
         let lemma = remove_simple_tag(dirty_lemma, r#"<span class="txt_emph1">"#, "</span>");
         let (list_search, after_list) = after_lemma.split_once("</ul>").unwrap();
         let definitions = parse_list_search(list_search);
@@ -40,11 +58,11 @@ pub fn search_general(agent: &ureq::Agent, query: &str) -> Option<GeneralSearch>
                     remove_simple_tag(british, "<daum:pron>", "</daum:pron>"),
                 )
             });
-        Some(GeneralSearch::En {
+        GeneralSearchHit::En {
             lemma,
             definitions,
             phonetics,
-        })
+        }
     } else if dict_start.starts_with("한국어사전") {
         let mut lemma = convert_sup(&remove_simple_tag(
             dirty_lemma,
@@ -68,15 +86,16 @@ pub fn search_general(agent: &ureq::Agent, query: &str) -> Option<GeneralSearch>
                 let (phonetics, _) = phonetics_start.split_once("</span>").unwrap();
                 phonetics.into()
             });
-        Some(GeneralSearch::Ko {
+        GeneralSearchHit::Ko {
             lemma,
             definitions,
             foreign,
             phonetics,
-        })
+        }
     } else {
-        None
-    }
+        return None;
+    };
+    Some(GeneralSearch { typo, hit })
 }
 
 fn remove_simple_tag(mut dirty: &str, tag_begin: &str, tag_end: &str) -> String {
