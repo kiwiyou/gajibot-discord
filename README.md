@@ -1,16 +1,20 @@
-# Serenity Hello World Bot with Shuttle
+# gajibot
 
-In this example we will deploy a Serenity bot with Shuttle that responds to the `!hello` command with `world!`. To run this bot we need a valid Discord Token. To get started log in to the [Discord developer portal](https://discord.com/developers/applications).
+## 명령어 일람
 
-1. Click the New Application button, name your application and click Create.
-2. Navigate to the Bot tab in the lefthand menu, and add a new bot.
-3. On the bot page click the Reset Token button to reveal your token. Put this token in your `Secrets.toml`. It's very important that you don't reveal your token to anyone, as it can be abused. Create a `.gitignore` file to omit your `Secrets.toml` from version control.
-4. For the sake of this example, you also need to scroll down on the bot page to the Message Content Intent section and enable that option.
+- `d/D <검색어>`
 
-To add the bot to a server we need to create an invite link.
+[다음 사전]에서 `<검색어>`를 검색합니다. 가장 관련성 있는 하나의 항목이 임베드로 표시됩니다. 현재 영어사전/영영사전/한국어사전을 지원합니다.
 
-1. On your bot's application page, open the OAuth2 page via the lefthand panel.
-2. Go to the URL Generator via the lefthand panel, and select the `bot` scope as well as the `Send Messages` permission in the Bot Permissions section.
-3. Copy the URL, open it in your browser and select a Discord server you wish to invite the bot to.
+## 실행 방법
 
-For more information please refer to the [Discord docs](https://discord.com/developers/docs/getting-started) as well as the [Serenity repo](https://github.com/serenity-rs/serenity) for more examples.
+아래 환경변수를 설정하고 실행합니다.
+
+```
+BOT_TOKEN=<디스코드 봇 토큰>
+BOT_EMOJI_IDK=<검색 결과가 없을 때 표시되는 이모지>
+BOT_EMOJI_LOADING=<검색 중일 때 표시되는 이모지>
+BOT_URL_MAYBE=<검색어 제안 시 표시되는 이미지 URL>
+```
+
+[다음 사전]: https://dic.daum.net

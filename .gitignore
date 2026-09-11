@@ -1,4 +1,5 @@
 
 /target
-.shuttle*
-Secrets*.toml
+.env
+.env.*
+!.env.example
