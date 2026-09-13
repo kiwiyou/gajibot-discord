@@ -41,6 +41,12 @@ pub enum GeneralSearchHit {
 		/// (AmE, BrE)
 		phonetics: Option<(String, String)>,
 	},
+	Ja {
+		lemma: String,
+		definitions: Vec<String>,
+		kanji: Option<String>,
+		phonetics: Option<String>,
+	},
 	Ko {
 		lemma: String,
 		definitions: Vec<String>,
@@ -127,6 +133,8 @@ impl DaumClient {
 			if let Some(sup) = lemma.find("<sup") {
 				lemma.truncate(sup);
 			}
+			let after_lemma =
+				remove_simple_tag(after_lemma, r#"<span class="txt_emph1">"#, "</span>");
 			let (list_search, _) = after_lemma.split_once("</ul>").unwrap();
 			let definitions = parse_list_search(list_search);
 			let foreign = list_search
@@ -146,6 +154,38 @@ impl DaumClient {
 				lemma,
 				definitions,
 				foreign,
+				phonetics,
+			}
+		} else if dict_start.starts_with("일본어사전") {
+			let mut lemma = unhtml_sup(&remove_simple_tag(
+				dirty_lemma,
+				r#"<span class="txt_emph1">"#,
+				"</span>",
+			));
+			if let Some(sup) = lemma.find("<sup") {
+				lemma.truncate(sup);
+			}
+			let after_lemma =
+				remove_simple_tag(after_lemma, r#"<span class="txt_emph1">"#, "</span>");
+			let (list_search, _) = after_lemma.split_once("</ul>").unwrap();
+			let definitions = parse_list_search(list_search);
+			let foreign = list_search
+				.split_once(r#"sub_txt">"#)
+				.map(|(_, foreign_start)| {
+					let (foreign, _) = foreign_start.split_once("</span>").unwrap();
+					foreign.trim().into()
+				});
+			let phonetics =
+				list_search
+					.split_once(r#"txt_pronounce">"#)
+					.map(|(_, phonetics_start)| {
+						let (phonetics, _) = phonetics_start.split_once("</span>").unwrap();
+						phonetics.into()
+					});
+			GeneralSearchHit::Ja {
+				lemma,
+				definitions,
+				kanji: foreign,
 				phonetics,
 			}
 		} else {
