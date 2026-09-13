@@ -1,4 +1,3 @@
-
 use gajibot::command::CommandHandler;
 use twilight_gateway::{Intents, ShardId};
 

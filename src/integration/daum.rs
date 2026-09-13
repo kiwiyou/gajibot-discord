@@ -93,7 +93,12 @@ impl DaumClient {
         let (dirty_lemma, after_lemma) = lemma_start.split_once("</a>")?;
         let hit = if dict_start.starts_with("영어사전") || dict_start.starts_with("영영사전")
         {
-            let lemma = remove_simple_tag(dirty_lemma, r#"<span class="txt_emph1">"#, "</span>");
+            // sup example: A²
+            let lemma = unhtml_sup(&remove_simple_tag(
+                dirty_lemma,
+                r#"<span class="txt_emph1">"#,
+                "</span>",
+            ));
             let (list_search, after_list) = after_lemma.split_once("</ul>").unwrap();
             let definitions = parse_list_search(list_search);
             let phonetics = after_list
@@ -102,9 +107,10 @@ impl DaumClient {
                     let (american, after_list) = phonetics.split_once("</span>").unwrap();
                     let (_, phonetics) = after_list.split_once(r#"txt_pronounce">"#).unwrap();
                     let (british, _) = phonetics.split_once("</span>").unwrap();
+                    // Λ example: stunning [stΛniŋ]
                     (
-                        remove_simple_tag(american, "<daum:pron>", "</daum:pron>"),
-                        remove_simple_tag(british, "<daum:pron>", "</daum:pron>"),
+                        unhtml_phonetics(american).replace('Λ', "ʌ"),
+                        unhtml_phonetics(british).replace('Λ', "ʌ"),
                     )
                 });
             GeneralSearchHit::En {
@@ -113,7 +119,7 @@ impl DaumClient {
                 phonetics,
             }
         } else if dict_start.starts_with("한국어사전") {
-            let mut lemma = convert_sup(&remove_simple_tag(
+            let mut lemma = unhtml_sup(&remove_simple_tag(
                 dirty_lemma,
                 r#"<span class="txt_emph1">"#,
                 "</span>",
@@ -179,12 +185,12 @@ fn parse_list_search(mut list_search: &str) -> Vec<String> {
             buf.push_str(dirty_definition);
             buf
         };
-        definitions.push(convert_sup(&definition));
+        definitions.push(unhtml_sup(&definition));
     }
     definitions
 }
 
-fn convert_sup(mut text: &str) -> String {
+fn unhtml_sup(mut text: &str) -> String {
     let mut buf = String::new();
     while let Some((before_sup, rest)) = text.split_once("<sup>") {
         buf.push_str(before_sup);
@@ -208,4 +214,10 @@ fn convert_sup(mut text: &str) -> String {
     }
     buf.push_str(text);
     buf
+}
+
+fn unhtml_phonetics(phonetics: &str) -> String {
+    // example: author [<daum:pron>ɔ́</daum:pron>ːθ<daum:pron>ə</daum:pron><daum:italic>r</daum:italic>]
+    let buf = remove_simple_tag(phonetics, "<daum:pron>", "</daum:pron>");
+    buf.replace("<daum:italic>r</daum:italic>", "𝘳")
 }
