@@ -2,24 +2,24 @@ use std::env::var;
 
 pub struct Config {
     pub token: String,
-    pub emoji: Emoji,
-    pub url_maybe: Option<String>,
+    pub daum: Daum,
 }
 
 impl Config {
     pub fn load() -> Self {
         Self {
-            token: var("BOT_TOKEN").unwrap(),
-            emoji: Emoji {
-                idk: var("BOT_EMOJI_IDK").ok(),
-                loading: var("BOT_EMOJI_LOADING").ok(),
+            token: var("TOKEN").unwrap(),
+            daum: Daum {
+                idk_emoji: var("DAUM_IDK_EMOJI").ok(),
+                loading_emoji: var("DAUM_LOADING_EMOJI").ok(),
+                maybe_url: var("DAUM_MAYBE_URL").ok(),
             },
-            url_maybe: var("BOT_URL_MAYBE").ok(),
         }
     }
 }
 
-pub struct Emoji {
-    pub idk: Option<String>,
-    pub loading: Option<String>,
+pub struct Daum {
+    pub idk_emoji: Option<String>,
+    pub loading_emoji: Option<String>,
+    pub maybe_url: Option<String>,
 }
