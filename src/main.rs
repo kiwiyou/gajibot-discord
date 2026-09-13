@@ -44,8 +44,8 @@ fn setup_logging() {
 			.with_no_client_auth();
 		let https_config = HttpsConnectorBuilder::new()
 			.with_tls_config(tls_config)
-			.https_only()
-			.enable_http2()
+			.https_or_http()
+			.enable_all_versions()
 			.build();
 		let http_client = opentelemetry_http::hyper::HyperClient::new(
 			https_config,
