@@ -177,6 +177,28 @@ impl DaumCommand {
 						embed.title = Some(title);
 						embed.description = Some(description);
 					}
+					GeneralSearchHit::Zh {
+						lemma,
+						definitions,
+						phonetics,
+					} => {
+						let mut description = String::new();
+						if let Some(phonetics) = phonetics {
+							writeln!(&mut description, "-# {phonetics}").unwrap();
+						}
+						if let Some((first, defs)) = definitions.split_first() {
+							if defs.is_empty() {
+								description.push_str(first);
+							} else {
+								write!(&mut description, r"1\. {first}").unwrap();
+								for (i, def) in defs.iter().enumerate() {
+									write!(&mut description, " {num}. {def}", num = i + 2).unwrap();
+								}
+							}
+						}
+						embed.title = Some(lemma);
+						embed.description = Some(description);
+					}
 				};
 				if !search.typo.is_empty() {
 					embed.footer = Some(EmbedFooter {

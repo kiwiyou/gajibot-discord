@@ -53,6 +53,11 @@ pub enum GeneralSearchHit {
 		foreign: Option<String>,
 		phonetics: Option<String>,
 	},
+	Zh {
+		lemma: String,
+		definitions: Vec<String>,
+		phonetics: Option<String>,
+	},
 }
 
 const QUERY_ENCODE_SET: AsciiSet = CONTROLS.add(b' ').add(b'"').add(b'#').add(b'<').add(b'>');
@@ -157,11 +162,8 @@ impl DaumClient {
 				phonetics,
 			}
 		} else if dict_start.starts_with("일본어사전") {
-			let mut lemma = unhtml_sup(&remove_simple_tag(
-				dirty_lemma,
-				r#"<span class="txt_emph1">"#,
-				"</span>",
-			));
+			let mut lemma =
+				remove_simple_tag(dirty_lemma, r#"<span class="txt_emph1">"#, "</span>");
 			if let Some(sup) = lemma.find("<sup") {
 				lemma.truncate(sup);
 			}
@@ -189,6 +191,28 @@ impl DaumClient {
 				lemma,
 				definitions,
 				kanji,
+				phonetics,
+			}
+		} else if dict_start.starts_with("중국어사전") {
+			let mut lemma =
+				remove_simple_tag(dirty_lemma, r#"<span class="txt_emph1">"#, "</span>");
+			if let Some(sup) = lemma.find("<sup") {
+				lemma.truncate(sup);
+			}
+			let after_lemma =
+				remove_simple_tag(after_lemma, r#"<span class="txt_emph1">"#, "</span>");
+			let (list_search, _) = after_lemma.split_once("</ul>").unwrap();
+			let definitions = parse_list_search(list_search);
+			let phonetics =
+				list_search
+					.split_once(r#"txt_pronounce">"#)
+					.map(|(_, phonetics_start)| {
+						let (phonetics, _) = phonetics_start.split_once("</span>").unwrap();
+						phonetics.into()
+					});
+			GeneralSearchHit::Zh {
+				lemma,
+				definitions,
 				phonetics,
 			}
 		} else {
