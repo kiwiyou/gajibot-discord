@@ -1,5 +1,7 @@
 # gajibot
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kiwiyou/gajibot-discord/badge)](https://scorecard.dev/viewer/?uri=github.com/kiwiyou/gajibot-discord)
+
 ## 명령어 일람
 
 - `d/D <검색어>`
