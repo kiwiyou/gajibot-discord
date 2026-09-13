@@ -168,8 +168,11 @@ impl DaumClient {
 			let after_lemma =
 				remove_simple_tag(after_lemma, r#"<span class="txt_emph1">"#, "</span>");
 			let (list_search, _) = after_lemma.split_once("</ul>").unwrap();
-			let definitions = parse_list_search(list_search);
-			let foreign = list_search
+			let mut definitions = parse_list_search(list_search);
+			for def in &mut definitions {
+				*def = def.replace("<daum:ruby>", "(").replace("</daum:ruby>", ")");
+			}
+			let kanji = list_search
 				.split_once(r#"sub_txt">"#)
 				.map(|(_, foreign_start)| {
 					let (foreign, _) = foreign_start.split_once("</span>").unwrap();
@@ -185,7 +188,7 @@ impl DaumClient {
 			GeneralSearchHit::Ja {
 				lemma,
 				definitions,
-				kanji: foreign,
+				kanji,
 				phonetics,
 			}
 		} else {
