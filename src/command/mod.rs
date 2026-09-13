@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use tracing::{event, info, Level};
 use twilight_gateway::{Event, EventTypeFlags, StreamExt};
 
 use crate::{config::Config, integration::DaumClient};
@@ -23,11 +24,25 @@ impl CommandHandler {
 		}
 	}
 
+	#[tracing::instrument(skip(self, shard), fields(discord.shard = shard.id().number()))]
 	pub async fn run(&self, shard: &mut twilight_gateway::Shard) {
+		info!("begin handling event");
 		while let Some(Ok(event)) = shard.next_event(EventTypeFlags::MESSAGE_CREATE).await {
+			event!(
+				Level::INFO,
+				event.type = event.kind().name(),
+				event.guild.id = event.guild_id().map(|id| id.get()),
+				"event received"
+			);
 			match event {
 				Event::GatewayClose(_) => break,
 				Event::MessageCreate(event) => {
+					event!(
+						Level::INFO,
+						event.channel.id = event.channel_id.get(),
+						event.message.id = event.id.get(),
+						"message received"
+					);
 					if let Some(command) = self.extract_daum(&event) {
 						tokio::spawn(command.handle());
 					}

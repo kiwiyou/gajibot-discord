@@ -6,6 +6,7 @@ use hyper_util::{
 	rt::TokioExecutor,
 };
 use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
+use tracing::info;
 
 #[derive(Clone)]
 pub struct DaumClient {
@@ -29,11 +30,13 @@ impl Default for DaumClient {
 	}
 }
 
+#[derive(Debug)]
 pub struct GeneralSearch {
 	pub typo: Vec<String>,
 	pub hit: GeneralSearchHit,
 }
 
+#[derive(Debug)]
 pub enum GeneralSearchHit {
 	En {
 		lemma: String,
@@ -63,6 +66,7 @@ pub enum GeneralSearchHit {
 const QUERY_ENCODE_SET: AsciiSet = CONTROLS.add(b' ').add(b'"').add(b'#').add(b'<').add(b'>');
 
 impl DaumClient {
+	#[tracing::instrument(skip(self))]
 	pub async fn search_general(&self, query: &str) -> Option<GeneralSearch> {
 		let uri = format!(
 			"https://dic.daum.net/search.do?dic=all&q={}",
@@ -74,18 +78,10 @@ impl DaumClient {
 			.method("GET")
 			.body(Full::default())
 			.unwrap();
-		let body = self
-			.client
-			.request(request)
-			.await
-			.unwrap()
-			.into_body()
-			.collect()
-			.await
-			.unwrap()
-			.to_bytes()
-			.to_vec();
-		let html = String::from_utf8(body).unwrap();
+		let (parts, body) = self.client.request(request).await.unwrap().into_parts();
+		info!(response = ?parts, "daum {} response received", parts.status);
+		let html = String::from_utf8(body.collect().await.unwrap().to_bytes().to_vec()).unwrap();
+		info!(html, "daum response body received");
 		let typo = html
 			.split_once("tit_speller")
 			.map_or_default(|(_, speller_begin)| {

@@ -1,6 +1,7 @@
 use std::fmt::Write;
 use std::sync::Arc;
 
+use tracing::info;
 use twilight_http::Client;
 use twilight_model::{
 	channel::message::{embed::EmbedFooter, Embed, MessageFlags},
@@ -43,7 +44,9 @@ impl CommandHandler {
 }
 
 impl DaumCommand {
+	#[tracing::instrument(skip(self))]
 	pub async fn handle(self) {
+		info!(query = self.query, "query daum");
 		let Self {
 			query,
 			channel_id,
@@ -76,6 +79,7 @@ impl DaumCommand {
 				edit.content(Some(idk)).await.unwrap();
 			}
 			Some(search) => {
+				info!(?search, "daum search succeeded");
 				let mut embed = Embed {
 					author: None,
 					color: Some(0x0090ff),
