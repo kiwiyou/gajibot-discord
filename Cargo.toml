@@ -36,7 +36,6 @@ opentelemetry-otlp = { version = "0.32.0", optional = true, default-features = f
 	"internal-logs",
 	"hyper-client",
 ] }
-opentelemetry-stdout = { version = "0.32.0", optional = true }
 opentelemetry_sdk = { version = "0.32.1", optional = true, features = [
 	"rt-tokio",
 	"experimental_logs_batch_log_processor_with_async_runtime",
@@ -60,7 +59,6 @@ otel = [
 	"opentelemetry_sdk",
 	"opentelemetry-otlp",
 	"opentelemetry-http",
-	"opentelemetry-stdout",
 	"opentelemetry-appender-tracing",
 ]
 opentelemetry = ["dep:opentelemetry"]

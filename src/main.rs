@@ -76,7 +76,6 @@ fn setup_logging() {
 			.build();
 		opentelemetry::global::set_tracer_provider(otel_tracer_provider);
 
-		let stdout_log_exporter = opentelemetry_stdout::LogExporter::default();
 		let otlp_log_exporter = opentelemetry_otlp::LogExporter::builder()
 			.with_http()
 			.with_http_client(http_client)
@@ -88,7 +87,6 @@ fn setup_logging() {
           opentelemetry_sdk::runtime::Tokio,
       )
       .build())
-			.with_simple_exporter(stdout_log_exporter)
 			.build();
 
 		// prevent telemetry-induced-telemetry
