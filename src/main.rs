@@ -11,21 +11,7 @@ fn main() {
 		.unwrap();
 
 	let _guard = rt.enter();
-	setup_logging();
-	rt.block_on(run_bot());
-}
 
-async fn run_bot() {
-	let config = gajibot::config::Config::load();
-	let mut shard = twilight_gateway::Shard::new(
-		ShardId::ONE,
-		config.token.clone(),
-		Intents::GUILD_MESSAGES | Intents::MESSAGE_CONTENT,
-	);
-	CommandHandler::new(config).run(&mut shard).await
-}
-
-fn setup_logging() {
 	let fmt_filter = EnvFilter::new("info").add_directive("opentelemetry=debug".parse().unwrap());
 	let fmt_layer = tracing_subscriber::fmt::Layer::new()
 		.with_thread_names(true)
@@ -34,8 +20,9 @@ fn setup_logging() {
 	let registry = tracing_subscriber::registry().with(fmt_layer);
 
 	#[cfg(feature = "otel")]
-	let registry = {
+	let (registry, _log) = {
 		use hyper_rustls::{ConfigBuilderExt, HttpsConnectorBuilder};
+		use opentelemetry::trace::TracerProvider;
 		use opentelemetry_otlp::WithHttpConfig;
 
 		let tls_config = rustls::ClientConfig::builder()
@@ -59,7 +46,7 @@ fn setup_logging() {
 			.build()
 			.unwrap();
 		let otel_metric_provider = opentelemetry_sdk::metrics::SdkMeterProvider::builder()
-			.with_periodic_exporter(otlp_metric_exporter)
+		.with_reader(opentelemetry_sdk::metrics::periodic_reader_with_async_runtime::PeriodicReader::builder(otlp_metric_exporter, opentelemetry_sdk::runtime::Tokio).build())
 			.build();
 		opentelemetry::global::set_meter_provider(otel_metric_provider);
 
@@ -72,9 +59,13 @@ fn setup_logging() {
 			.build()
 			.unwrap();
 		let otel_tracer_provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
-			.with_batch_exporter(otlp_span_exporter)
+			.with_span_processor(
+				opentelemetry_sdk::trace::span_processor_with_async_runtime::BatchSpanProcessor::builder(otlp_span_exporter, opentelemetry_sdk::runtime::Tokio).build(),
+			)
 			.build();
+		let tracer = otel_tracer_provider.tracer("gajibot");
 		opentelemetry::global::set_tracer_provider(otel_tracer_provider);
+		let span_layer = tracing_opentelemetry::layer().with_tracer(tracer);
 
 		let otlp_log_exporter = opentelemetry_otlp::LogExporter::builder()
 			.with_http()
@@ -102,8 +93,23 @@ fn setup_logging() {
 			)
 			.build()
 			.with_filter(otel_filter);
-		registry.with(otel_layer)
+		(
+			registry.with(span_layer).with(otel_layer),
+			otel_log_provider,
+		)
 	};
 
 	registry.init();
+
+	rt.block_on(run_bot());
+}
+
+async fn run_bot() {
+	let config = gajibot::config::Config::load();
+	let mut shard = twilight_gateway::Shard::new(
+		ShardId::ONE,
+		config.token.clone(),
+		Intents::GUILD_MESSAGES | Intents::MESSAGE_CONTENT,
+	);
+	CommandHandler::new(config).run(&mut shard).await
 }
